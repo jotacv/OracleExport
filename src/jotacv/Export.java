@@ -3,6 +3,8 @@ package jotacv;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.sql.Blob;
+import java.sql.Clob;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.ResultSet;
@@ -172,8 +174,10 @@ public class Export {
 		String columnType = "";
 		String columnContent = "";
 		FileOutputStream fos = new FileOutputStream("output.sql");
+		int tableidx=0;
 		for(String tableName: tables){
-			fos.write(("REM INSERTING into "+tableName+"\n").getBytes());
+			tableidx++;
+			fos.write(("\nREM INSERTING into "+tableName+"\n").getBytes());
 			fos.write("SET DEFINE OFF;\n".getBytes());
 			try{
 				List<String> columnsHeaders = new ArrayList<String>();
@@ -196,40 +200,42 @@ public class Export {
 							columnContent	= null;
 							if(rmd!=null && isLOB(columnType)){
 								if(res.getClob(j)!=null){
-									columnContent = res.getClob(j).getSubString(1, (int)res.getClob(j).length());
+									Clob clob = res.getClob(j);
+									columnContent = clob!=null?clob.getSubString(1,(int)clob.length()):"";
 									row.add(new Data(columnType,columnContent));
 								}else{
 									columnContent="";
 									row.add(new Data(columnType,null));
 								}
 							}else if(rmd!=null && isBLOB(columnType)){
-								columnContent = res.getBlob(j).toString();
+								Blob blob = res.getBlob(j);
+								columnContent = blob!=null?blob.toString():"";
 								row.add(new Data(columnType,columnContent));
 							}else{
 								columnContent=res.getString(j);
 								row.add(new Data(columnType,columnContent));
 							}
-						}catch(Error e){
-							System.out.print("ERROR COLUMN "+j+": ");
+						}catch(Exception e){
+							System.out.print("- ERROR IN TABLE "+tableName+",ROW "+tableidx+", COLUMN "+j+": ");
 							e.printStackTrace();
-							System.out.println("    ColumnType: "+columnType);
-							System.out.println("    ColumnContent: "+columnContent);
+							System.out.println("-- ColumnType: "+columnType);
+							System.out.println("-- ColumnContent: "+columnContent);
 						}
 					}
 					String insert_part2 = createSqlPart2(row);
 					fos.write((insert_part1+insert_part2).getBytes());
 				}
 			}catch(Exception e){
-				System.out.print("ERROR: ");
+				System.out.print("- ERROR IN TABLE "+tableName+": ");
 				e.printStackTrace();
-				System.out.println("    ColumnType: "+columnType);
-				System.out.println("    ColumnContent: "+columnContent);
+				System.out.println("-- ColumnType: "+columnType);
+				System.out.println("-- ColumnContent: "+columnContent);
 			}finally{
 				res.close();
 				statm.close();
 			}
-			fos.write("COMMIT;\n\n".getBytes());
 		}
+		fos.write("COMMIT;\n\n".getBytes());
 		fos.close();
 	}
 
