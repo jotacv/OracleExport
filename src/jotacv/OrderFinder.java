@@ -7,7 +7,6 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -16,6 +15,7 @@ public class OrderFinder {
 	
 	private boolean ordered = false;
 	private SwappingList orderedList = null;
+	private Map<String,Integer> swapMap = new HashMap<String,Integer>();
 	
 	public boolean isOrdered(){return ordered;}
 	public List<String> getOrderedList(){
@@ -40,45 +40,15 @@ public class OrderFinder {
 		return DriverManager.getConnection(url,user,password);
 	}
 	
-	private class SwappingList extends ArrayList<String> implements Comparator<String>{		
+	private class SwappingList extends ArrayList<String>{		
 		private static final long serialVersionUID = 1L;
-		private Map<String,Integer> swapMap = new HashMap<String, Integer>();
-		private int maxSwap = 1000;
-		private int i = 0;
-		private List<Constraint> constraints;
-		private Constraint getConstraint(String tableFrom, String tableTo){
-			for(Constraint constraint : constraints){
-				if (constraint.tableFrom.equals(tableFrom) && constraint.tableTo.equals(tableTo)){
-					return constraint;
-				}
-			}
-			return null;
+		public void moveDown(String tableName){
+			int i = this.indexOf(tableName);
+			Collections.swap(this,i,i+1);
 		}
-		@Override
-		public int compare(String tableFrom, String tableTo){
-			if((this.i++%10)==0)System.out.print(".");
-			Constraint constraint = getConstraint(tableFrom, tableTo);
-			if(constraint==null){
-				return 0;
-			}else{
-				if(this.indexOf(tableFrom)<this.indexOf(tableTo)){
-					String key = (String) (tableFrom+"-"+tableTo);
-					if(!swapMap.keySet().contains(key))
-						swapMap.put(key, 0);
-					int val = swapMap.get(key);
-					if (val>=maxSwap)
-						return -1;
-					swapMap.put(key, val++);
-					if (val%100 == 99)
-						System.out.println("WARN: Key '"+key+"' exceded "+val+" iterations");
-					return 1;
-				}else{
-					return -1;
-				}
-			}
-		}
-		public void setConstraints(List<Constraint> constraints) {
-			this.constraints = constraints;
+		public void moveUp(String tableName){
+			int i = this.indexOf(tableName);
+			Collections.swap(this,i,i-1);
 		}
 		public SwappingList(){
 			super();
@@ -135,11 +105,43 @@ public class OrderFinder {
 		//Then do the magic
 		System.out.print("Ordering");
 		this.orderedList = new SwappingList();
-		this.orderedList.setConstraints(constraints);
 		this.orderedList.addAll(tables);
-		Collections.sort(this.orderedList);
+		i = 0;
+		int c = 0;
+		int swapTimes = 0;
+		int maxSwap = 1000;
+		int maxSwap10 = maxSwap*10;
+		Constraint constraint = null;
+		for (String table: orderedList){
+			swapMap.put(table, 0);
+		}
+		while(i<constraints.size()){
+			if((++c%maxSwap10)==0)System.out.print(".");
+			constraint = constraints.get(i);
+			if(orderedList.indexOf(constraint.tableFrom)<orderedList.indexOf(constraint.tableTo)){
+				swapTimes = swapMap.get(constraint.tableFrom);
+				if(swapTimes>=maxSwap){
+					i++;
+				}else{
+					orderedList.moveDown(constraint.tableFrom);
+					orderedList.moveUp(constraint.tableTo);
+					swapMap.put(constraint.tableFrom, ++swapTimes);
+					i=0;
+				}
+			}else{
+				i++;
+			}
+		}
+		System.out.println(" Done");
+		i=0;
+		for (Constraint constr : constraints){
+			if(orderedList.indexOf(constr.tableFrom)<orderedList.indexOf(constr.tableTo)){
+				System.out.println("   WARN: Constraint broken "+(++i)+": "+constr.tableFrom+"->"+constr.tableTo);
+			}
+		}
+		
 		this.ordered=true;
-		System.out.println(" Done");	
+			
 	}
 	
 	public static void main(String[] argv) throws Exception {
