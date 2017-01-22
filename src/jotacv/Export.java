@@ -20,11 +20,13 @@ public class Export {
 	
 	private static Connection connection = null;
 	
-	public enum DataType{LOB, DATE, OTH, NULL}
+	private enum DataType{LOB, DATE, OTH, NULL}
 	
-	public int lobCount = 1;
+	private int lobCount = 1;
 	
-	public String daPattern = "(\\d\\d\\d\\d)-(\\d\\d)-(\\d\\d)\\s(\\d\\d):(\\d\\d):(\\d\\d)(\\.?\\d*)";
+	private String daPattern = "(\\d\\d\\d\\d)-(\\d\\d)-(\\d\\d)\\s(\\d\\d):(\\d\\d):(\\d\\d)(\\.?\\d*)";
+	
+	private int fileIdx= 0;
 	
 	public boolean isLOB(String type){
 		if (type!=null && 
@@ -90,7 +92,7 @@ public class Export {
 					FileOutputStream fos = new FileOutputStream(ret);
 					fos.write(this.val.getBytes());
 					fos.close();
-					ret="["+ret+"]";
+					ret="'["+ret+"]'";
 					break;
 				case DATE:
 					Matcher m = Pattern.compile(daPattern).matcher(this.val);
@@ -148,6 +150,10 @@ public class Export {
 		}
 		return ret.toString();
 	}
+	
+	private FileOutputStream getFile() throws FileNotFoundException{
+		return new FileOutputStream("output"+fileIdx+++".sql");
+	}
 
 	
 	private void ExportAll(String owner) throws SQLException, IOException{
@@ -173,8 +179,9 @@ public class Export {
 		//Retrieving data & export
 		String columnType = "";
 		String columnContent = "";
-		FileOutputStream fos = new FileOutputStream("output.sql");
+		FileOutputStream fos = getFile();
 		int tableidx=0;
+		int lineOutputCount = 0;
 		for(String tableName: tables){
 			tableidx++;
 			fos.write(("\nREM INSERTING into "+tableName+"\n").getBytes());
@@ -183,7 +190,7 @@ public class Export {
 				List<String> columnsHeaders = new ArrayList<String>();
 				System.out.println("Fetching table "+tableName);
 				statm = connection.createStatement();
-				res = statm.executeQuery("select COLUMN_NAME from USER_TAB_COLUMNS where table_name='"+tableName+"'");
+				res = statm.executeQuery("select COLUMN_NAME from USER_TAB_COLUMNS where table_name='"+tableName+"' order by column_id");
 				while(res.next()){
 					columnsHeaders.add(res.getString(1));
 				}
@@ -224,6 +231,7 @@ public class Export {
 					}
 					String insert_part2 = createSqlPart2(row);
 					fos.write((insert_part1+insert_part2).getBytes());
+					lineOutputCount++;
 				}
 			}catch(Exception e){
 				System.out.print("- ERROR IN TABLE "+tableName+": ");
@@ -234,8 +242,14 @@ public class Export {
 				res.close();
 				statm.close();
 			}
+			fos.write("COMMIT;\n\n".getBytes());
+			//When 10k insert lines are reached change file
+			if(lineOutputCount>=10000){
+				lineOutputCount=0;
+				fos.close();
+				fos = getFile();
+			}
 		}
-		fos.write("COMMIT;\n\n".getBytes());
 		fos.close();
 	}
 
