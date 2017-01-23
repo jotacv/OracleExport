@@ -20,7 +20,7 @@ public class Export {
 	
 	private static Connection connection = null;
 	
-	private enum DataType{LOB, DATE, OTH, NULL}
+	private enum DataType{LOB, DATE, NUMBER, OTH, NULL}
 	
 	private int lobCount = 1;
 	
@@ -42,6 +42,13 @@ public class Export {
 	
 	public boolean isBLOB(String type){
 		if (type!=null && type.contains("BLOB")){
+			return true;
+		}else{
+			return false;
+		}
+	}
+	public boolean isNumber(String type){
+		if (type!=null && type.contains("NUMBER")){
 			return true;
 		}else{
 			return false;
@@ -70,6 +77,9 @@ public class Export {
 					this.val= val;
 				}else if(isLOB(type) || isBLOB(type)){
 					this.type = DataType.LOB;
+					this.val=val;
+				}else if(isNumber(type)){
+					this.type = DataType.NUMBER;
 					this.val=val;
 				}else{
 					this.type=DataType.OTH;
@@ -113,6 +123,9 @@ public class Export {
 					break;
 				case NULL:
 					ret = "null";
+					break;
+				case NUMBER:
+					ret = this.val;
 					break;
 				case OTH:
 					ret = "'"+this.val+"'";
