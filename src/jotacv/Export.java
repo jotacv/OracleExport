@@ -12,6 +12,7 @@ import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -128,7 +129,7 @@ public class Export {
 					ret = this.val;
 					break;
 				case OTH:
-					ret = "'"+this.val+"'";
+					ret = "'"+this.val.replace("'", "''")+"'";
 					break;
 				}
 			}catch(FileNotFoundException e){} catch (IOException e) {
@@ -169,13 +170,13 @@ public class Export {
 	}
 
 	
-	private void ExportAll(String owner) throws SQLException, IOException{
-		//Tables list
+	private void ExportAll(String owner, List<String> tablesFilter) throws SQLException, IOException{
+		//Tables list & order
 		Statement statm=null;
 		ResultSet res=null;
 		List<String> tables=null;
 		try{
-			OrderFinder orderFinder = new OrderFinder(connection, owner);
+			OrderFinder orderFinder = new OrderFinder(connection, owner, tablesFilter);
 			tables = orderFinder.getOrderedList();
 		}catch(Exception e){
 			System.out.println("ERROR: Cannot get tables order");
@@ -186,8 +187,22 @@ public class Export {
 				tables.add(res.getString(1));
 			}
 			res.close(); statm.close();
-			System.out.println("\nGot "+tables.size()+" tables.\n");
+			System.out.println("\nGot "+tables.size()+" tables.");
+			//Filter tables
+			if(tablesFilter!=null && !tablesFilter.isEmpty()){
+				List<String> tablesFiltered = new ArrayList<>();
+				for (String table : tables){
+					if (tablesFilter.contains(table))
+						tablesFiltered.add(table);
+				}
+				if(!tablesFiltered.isEmpty())
+					tables = tablesFiltered;
+				System.out.println("Narrowed down to "+tables.size());
+			}
+			System.out.println("\n");
 		}
+		
+
 		
 		//Retrieving data & export
 		String columnType = "";
@@ -278,10 +293,17 @@ public class Export {
 
 		System.out.println("Oracle JDBC Driver Connected!");
 
-		;
+		List<String> listaTablas = null;
 		try {
-			if (argv.length==3){
+			if (argv.length==3 || argv.length==4){
 				connection = DriverManager.getConnection(argv[0],argv[1],argv[2]);
+				if(argv.length==4){
+					try{
+						listaTablas = Arrays.asList(argv[3].split(","));
+					}catch(Exception e){
+						System.out.println("Cannot parse tables list. Make sure 4th argument is a comma separated list of tables");
+					}
+				}
 			}else{
 				throw new IllegalArgumentException("Usage: java -jar this.jar url user password");
 			}
@@ -293,7 +315,7 @@ public class Export {
 
 		if (connection != null) {
 			Export main = new Export();
-			main.ExportAll(argv[1]);
+			main.ExportAll(argv[1],listaTablas);
 			System.out.println("----------------- DONE! -----------------");
 		} else {
 			System.out.println("Failed to make connection!");

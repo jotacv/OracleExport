@@ -64,8 +64,8 @@ public class OrderFinder {
 		}
 	}
 	
-	public OrderFinder(Connection connection, String owner) throws SQLException{
-		//First get all the tables
+	public OrderFinder(Connection connection, String owner, List<String> tablesFilter) throws SQLException{
+		//First get all the tables or filtered
 		System.out.print("Tables lookup");
 		int i =0;
 		Statement statm = connection.createStatement();
@@ -78,6 +78,16 @@ public class OrderFinder {
 		res.close();
 		statm.close();
 		System.out.println(" Got "+tables.size()+" tables.");
+		if(tablesFilter!=null && !tablesFilter.isEmpty()){
+			List<String> tablesFiltered = new ArrayList<>();
+			for (String table : tablesFilter){
+				if (tables.contains(table))
+					tablesFiltered.add(table);
+			}
+			if(!tablesFiltered.isEmpty())
+				tables = tablesFiltered;
+			System.out.println("Narrowed down to "+tables.size());
+		}
 		
 		//Second get all the constraints
 		System.out.print("Constraint lookup");
@@ -156,7 +166,7 @@ public class OrderFinder {
 			Connection connection = getConnection(argv[0],argv[1],argv[2]);
 			if (connection!=null){
 				System.out.println("Connected! -- Sorting tables algorithm");
-				OrderFinder orderFinder = new OrderFinder(connection,argv[1]);
+				OrderFinder orderFinder = new OrderFinder(connection,argv[1],null);
 				//Output
 				for (String orderedTable : orderFinder.getOrderedList()){
 					System.out.println(orderedTable);
