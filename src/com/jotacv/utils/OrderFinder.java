@@ -1,4 +1,4 @@
-package jotacv;
+package com.jotacv.utils;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -35,6 +35,9 @@ public class OrderFinder {
 			+ "ucc2 WHERE uc.constraint_name = ucc1.constraint_name AND uc.r_constraint_name "
 			+ "= ucc2.constraint_name AND ucc1.POSITION = ucc2.POSITION AND uc.constraint_type "
 			+ "= 'R'AND uc.constraint_name = '";
+	
+	private String constraintLookupQuery = "select c.constraint_name from all_constraints c, all_tables t "
+			+ "where c.table_name = t.table_name AND t.owner = '";
 	
 	public static Connection getConnection(String url, String user, String password) throws SQLException{
 		return DriverManager.getConnection(url,user,password);
@@ -92,8 +95,16 @@ public class OrderFinder {
 		//Second get all the constraints
 		System.out.print("Constraint lookup");
 		Statement statm2 = connection.createStatement();
-		ResultSet res2 = statm2.executeQuery("select c.constraint_name from all_constraints c, all_tables t "
-				+ "where c.table_name = t.table_name AND t.owner = '"+owner+"'");
+		StringBuilder filterTablesOnConstraintLookup = new StringBuilder();
+		if(tablesFilter!=null && !tablesFilter.isEmpty()){
+			filterTablesOnConstraintLookup.append(" (");
+			for (String table : tablesFilter){
+				filterTablesOnConstraintLookup.append(table).append(",");
+			}
+			filterTablesOnConstraintLookup.deleteCharAt(filterTablesOnConstraintLookup.length()-1);
+			filterTablesOnConstraintLookup.append(")");
+		}
+		ResultSet res2 = statm2.executeQuery(constraintLookupQuery+owner+"'"+filterTablesOnConstraintLookup);
 		List<Constraint> constraints = new ArrayList<Constraint>();
 		String constraintName=null;
 		i =0;

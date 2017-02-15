@@ -1,4 +1,4 @@
-package jotacv;
+package com.jotacv.utils;
 
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
@@ -14,6 +14,7 @@ import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Locale;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -179,7 +180,7 @@ public class Export {
 			OrderFinder orderFinder = new OrderFinder(connection, owner, tablesFilter);
 			tables = orderFinder.getOrderedList();
 		}catch(Exception e){
-			System.out.println("ERROR: Cannot get tables order");
+			System.out.println(" ERROR: Cannot get tables order");
 			statm = connection.createStatement();
 			res = statm.executeQuery("SELECT table_name FROM all_tables WHERE owner = '"+owner+"'");
 			tables = new ArrayList<String>();
@@ -299,7 +300,7 @@ public class Export {
 				connection = DriverManager.getConnection(argv[0],argv[1],argv[2]);
 				if(argv.length==4){
 					try{
-						listaTablas = Arrays.asList(argv[3].split(","));
+						listaTablas = Arrays.asList(argv[3].replace(" ", "").split(","));
 					}catch(Exception e){
 						System.out.println("Cannot parse tables list. Make sure 4th argument is a comma separated list of tables");
 					}
@@ -314,6 +315,7 @@ public class Export {
 		}
 
 		if (connection != null) {
+			Locale.setDefault(Locale.US);
 			Export main = new Export();
 			main.ExportAll(argv[1],listaTablas);
 			System.out.println("----------------- DONE! -----------------");
