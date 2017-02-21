@@ -171,7 +171,7 @@ public class Export {
 	}
 
 	
-	private void ExportAll(String owner, List<String> tablesFilter) throws SQLException, IOException{
+	private void ExportAll(String owner, List<String> tablesFilter, boolean excludeFlag) throws SQLException, IOException{
 		//Tables list & order
 		Statement statm=null;
 		ResultSet res=null;
@@ -193,7 +193,7 @@ public class Export {
 			if(tablesFilter!=null && !tablesFilter.isEmpty()){
 				List<String> tablesFiltered = new ArrayList<>();
 				for (String table : tables){
-					if (tablesFilter.contains(table))
+					if (tablesFilter.contains(table)^excludeFlag)
 						tablesFiltered.add(table);
 				}
 				if(!tablesFiltered.isEmpty())
@@ -295,18 +295,29 @@ public class Export {
 		System.out.println("Oracle JDBC Driver Connected!");
 
 		List<String> listaTablas = null;
+		boolean excludeFlag = false;
 		try {
-			if (argv.length==3 || argv.length==4){
+			if (argv.length==3 || argv.length==4 || argv.length==5){
 				connection = DriverManager.getConnection(argv[0],argv[1],argv[2]);
-				if(argv.length==4){
+				if(argv.length>=4){
+					String list = null;
+					
+					if(argv.length==4){
+						list = argv[3];
+					}else{
+						excludeFlag = argv[3].equals("-e");
+						if(!excludeFlag)
+							throw new IllegalArgumentException();
+						list = argv[4];
+					}
 					try{
-						listaTablas = Arrays.asList(argv[3].replace(" ", "").split(","));
+						listaTablas = Arrays.asList(list.replace(" ", "").split(","));
 					}catch(Exception e){
 						System.out.println("Cannot parse tables list. Make sure 4th argument is a comma separated list of tables");
 					}
 				}
 			}else{
-				throw new IllegalArgumentException("Usage: java -jar this.jar url user password");
+				throw new IllegalArgumentException("Usage: java -jar this.jar url user password [-e] [tableList]");
 			}
 		} catch (SQLException e) {
 			System.out.println("Connection Failed! Check output console");
@@ -317,7 +328,7 @@ public class Export {
 		if (connection != null) {
 			Locale.setDefault(Locale.US);
 			Export main = new Export();
-			main.ExportAll(argv[1],listaTablas);
+			main.ExportAll(argv[1],listaTablas,excludeFlag);
 			System.out.println("----------------- DONE! -----------------");
 		} else {
 			System.out.println("Failed to make connection!");

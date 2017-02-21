@@ -95,15 +95,18 @@ public class OrderFinder {
 		//Second get all the constraints
 		System.out.print("Constraint lookup");
 		Statement statm2 = connection.createStatement();
-		StringBuilder filterTablesOnConstraintLookup = new StringBuilder();
+		String filterTablesOnConstraintLookup = "";
 		if(tablesFilter!=null && !tablesFilter.isEmpty()){
-			filterTablesOnConstraintLookup.append(" (");
+			StringBuilder filterTablesOnConstraintLookupBuilder = new StringBuilder();
+			filterTablesOnConstraintLookupBuilder.append("and t.table_name in (");
 			for (String table : tablesFilter){
-				filterTablesOnConstraintLookup.append(table).append(",");
+				filterTablesOnConstraintLookupBuilder.append("'").append(table).append("'").append(",");
 			}
-			filterTablesOnConstraintLookup.deleteCharAt(filterTablesOnConstraintLookup.length()-1);
-			filterTablesOnConstraintLookup.append(")");
+			filterTablesOnConstraintLookupBuilder.deleteCharAt(filterTablesOnConstraintLookup.length()-1);
+			filterTablesOnConstraintLookupBuilder.append(")");
+			filterTablesOnConstraintLookup = filterTablesOnConstraintLookupBuilder.toString();
 		}
+		
 		ResultSet res2 = statm2.executeQuery(constraintLookupQuery+owner+"'"+filterTablesOnConstraintLookup);
 		List<Constraint> constraints = new ArrayList<Constraint>();
 		String constraintName=null;
