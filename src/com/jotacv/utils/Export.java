@@ -24,7 +24,7 @@ public class Export {
 	
 	private enum DataType{LOB, DATE, NUMBER, OTH, NULL}
 	
-	private int lobCount = 1;
+//	private int lobCount = 1;
 	
 	private String daPattern = "(\\d\\d\\d\\d)-(\\d\\d)-(\\d\\d)\\s(\\d\\d):(\\d\\d):(\\d\\d)(\\.?\\d*)";
 	
@@ -96,15 +96,15 @@ public class Export {
 		@Override
 		public String toString(){
 			String ret = null;
-			try{
+//			try{
 				switch (this.type){
 				case LOB:
-					//Lob column content goes to separate files
-					ret = "lob"+(lobCount++)+".txt";
-					FileOutputStream fos = new FileOutputStream(ret);
-					fos.write(this.val.getBytes());
-					fos.close();
-					ret="'["+ret+"]'";
+//					ret = "lob"+(lobCount++)+".txt";
+//					FileOutputStream fos = new FileOutputStream(ret);
+//					fos.write(this.val.getBytes());
+//					fos.close();
+//					ret="'["+ret+"]'";
+					ret = "q'{"+this.val+"}'";
 					break;
 				case DATE:
 					Matcher m = Pattern.compile(daPattern).matcher(this.val);
@@ -133,9 +133,9 @@ public class Export {
 					ret = "'"+this.val.replace("'", "''")+"'";
 					break;
 				}
-			}catch(FileNotFoundException e){} catch (IOException e) {
-				System.out.println("Something happened with lob "+lobCount);
-			}
+//			}catch(FileNotFoundException e){} catch (IOException e) {
+//				System.out.println("Something happened with lob "+lobCount);
+//			}
 			return ret;
 		}
 	}
@@ -177,7 +177,7 @@ public class Export {
 		ResultSet res=null;
 		List<String> tables=null;
 		try{
-			OrderFinder orderFinder = new OrderFinder(connection, owner, tablesFilter);
+			OrderFinder orderFinder = new OrderFinder(connection, owner, tablesFilter, excludeFlag);
 			tables = orderFinder.getOrderedList();
 		}catch(Exception e){
 			System.out.println(" ERROR: Cannot get tables order");

@@ -67,7 +67,7 @@ public class OrderFinder {
 		}
 	}
 	
-	public OrderFinder(Connection connection, String owner, List<String> tablesFilter) throws SQLException{
+	public OrderFinder(Connection connection, String owner, List<String> tablesFilter, boolean excludeFlag) throws SQLException{
 		//First get all the tables or filtered
 		System.out.print("Tables lookup");
 		int i =0;
@@ -83,8 +83,8 @@ public class OrderFinder {
 		System.out.println(" Got "+tables.size()+" tables.");
 		if(tablesFilter!=null && !tablesFilter.isEmpty()){
 			List<String> tablesFiltered = new ArrayList<>();
-			for (String table : tablesFilter){
-				if (tables.contains(table))
+			for (String table : tables){
+				if (tablesFilter.contains(table)^excludeFlag)
 					tablesFiltered.add(table);
 			}
 			if(!tablesFiltered.isEmpty())
@@ -98,11 +98,11 @@ public class OrderFinder {
 		String filterTablesOnConstraintLookup = "";
 		if(tablesFilter!=null && !tablesFilter.isEmpty()){
 			StringBuilder filterTablesOnConstraintLookupBuilder = new StringBuilder();
-			filterTablesOnConstraintLookupBuilder.append("and t.table_name in (");
+			filterTablesOnConstraintLookupBuilder.append("and t.table_name ").append(excludeFlag?"not":"").append(" in (");
 			for (String table : tablesFilter){
 				filterTablesOnConstraintLookupBuilder.append("'").append(table).append("'").append(",");
 			}
-			filterTablesOnConstraintLookupBuilder.deleteCharAt(filterTablesOnConstraintLookup.length()-1);
+			filterTablesOnConstraintLookupBuilder.deleteCharAt(filterTablesOnConstraintLookupBuilder.length()-1);
 			filterTablesOnConstraintLookupBuilder.append(")");
 			filterTablesOnConstraintLookup = filterTablesOnConstraintLookupBuilder.toString();
 		}
@@ -180,7 +180,7 @@ public class OrderFinder {
 			Connection connection = getConnection(argv[0],argv[1],argv[2]);
 			if (connection!=null){
 				System.out.println("Connected! -- Sorting tables algorithm");
-				OrderFinder orderFinder = new OrderFinder(connection,argv[1],null);
+				OrderFinder orderFinder = new OrderFinder(connection,argv[1],null, false);
 				//Output
 				for (String orderedTable : orderFinder.getOrderedList()){
 					System.out.println(orderedTable);
