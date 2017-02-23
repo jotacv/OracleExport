@@ -30,14 +30,12 @@ public class OrderFinder {
 		}
 	}
 	
-	private String constraintQuery = "SELECT ucc1.TABLE_NAME, ucc2.TABLE_NAME "
-			+ "FROM user_constraints uc, user_cons_columns ucc1, user_cons_columns "
-			+ "ucc2 WHERE uc.constraint_name = ucc1.constraint_name AND uc.r_constraint_name "
-			+ "= ucc2.constraint_name AND ucc1.POSITION = ucc2.POSITION AND uc.constraint_type "
-			+ "= 'R'AND uc.constraint_name = '";
-	
-	private String constraintLookupQuery = "select c.constraint_name from all_constraints c, all_tables t "
-			+ "where c.table_name = t.table_name AND t.owner = '";
+	private String constraintLookupQuery = "SELECT ucc1.TABLE_NAME,ucc2.TABLE_NAME FROM user_constraints uc,"
+			+ "user_cons_columns ucc1,user_cons_columns ucc2,(SELECT c.constraint_name AS constraint_name FROM " 
+			+ "all_constraints c, all_tables t WHERE c.table_name = t.table_name AND t.owner = '%1s' %2s) ac "
+			+ "WHERE uc.constraint_name = ucc1.constraint_name AND uc.r_constraint_name "
+			+ "= ucc2.constraint_name AND ucc1.POSITION = ucc2.POSITION AND uc.constraint_type = 'R' "
+			+ "AND uc.constraint_name = ac.constraint_name";
 	
 	public static Connection getConnection(String url, String user, String password) throws SQLException{
 		return DriverManager.getConnection(url,user,password);
@@ -98,7 +96,7 @@ public class OrderFinder {
 		String filterTablesOnConstraintLookup = "";
 		if(tablesFilter!=null && !tablesFilter.isEmpty()){
 			StringBuilder filterTablesOnConstraintLookupBuilder = new StringBuilder();
-			filterTablesOnConstraintLookupBuilder.append("and t.table_name ").append(excludeFlag?"not":"").append(" in (");
+			filterTablesOnConstraintLookupBuilder.append("AND t.table_name ").append(excludeFlag?"NOT ":"").append("IN (");
 			for (String table : tablesFilter){
 				filterTablesOnConstraintLookupBuilder.append("'").append(table).append("'").append(",");
 			}
@@ -107,20 +105,12 @@ public class OrderFinder {
 			filterTablesOnConstraintLookup = filterTablesOnConstraintLookupBuilder.toString();
 		}
 		
-		ResultSet res2 = statm2.executeQuery(constraintLookupQuery+owner+"'"+filterTablesOnConstraintLookup);
+		ResultSet res2 = statm2.executeQuery(String.format(constraintLookupQuery,owner,filterTablesOnConstraintLookup));
 		List<Constraint> constraints = new ArrayList<Constraint>();
-		String constraintName=null;
 		i =0;
 		while(res2.next()){
 			if((i++%10)==0)System.out.print(".");
-			constraintName=res2.getString(1);
-			statm = connection.createStatement();
-			res = statm.executeQuery(constraintQuery+constraintName+"'");
-			while(res.next()){
-				constraints.add(new Constraint(res.getString(1), res.getString(2)));
-			}
-			res.close();
-			statm.close();
+			constraints.add(new Constraint(res2.getString(1), res2.getString(2)));
 		}
 		res2.close();
 		statm2.close();
@@ -133,7 +123,7 @@ public class OrderFinder {
 		i = 0;
 		int c = 0;
 		int swapTimes = 0;
-		int maxSwap = 1000;
+		int maxSwap = 1000000;
 		int maxSwap10 = maxSwap*10;
 		Constraint constraint = null;
 		for (String table: orderedList){
@@ -148,7 +138,8 @@ public class OrderFinder {
 					i++;
 				}else{
 					orderedList.moveDown(constraint.tableFrom);
-					orderedList.moveUp(constraint.tableTo);
+					if(orderedList.indexOf(constraint.tableFrom)<orderedList.indexOf(constraint.tableTo))
+						orderedList.moveUp(constraint.tableTo);
 					swapMap.put(constraint.tableFrom, ++swapTimes);
 					i=0;
 				}
