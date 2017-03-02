@@ -30,7 +30,7 @@ public class OrderFinder {
 		}
 	}
 	
-	private String constraintLookupQuery = "SELECT ucc1.TABLE_NAME,ucc2.TABLE_NAME FROM user_constraints uc,"
+	private String constraintLookupQuery = "SELECT uc.constraint_name, ucc1.TABLE_NAME, ucc2.TABLE_NAME FROM user_constraints uc,"
 			+ "user_cons_columns ucc1,user_cons_columns ucc2,(SELECT c.constraint_name AS constraint_name FROM " 
 			+ "all_constraints c, all_tables t WHERE c.table_name = t.table_name AND t.owner = '%1s' %2s) ac "
 			+ "WHERE uc.constraint_name = ucc1.constraint_name AND uc.r_constraint_name "
@@ -57,9 +57,11 @@ public class OrderFinder {
 	}
 
 	public class Constraint{
+		public String name;
 		public String tableFrom;
 		public String tableTo;
-		public Constraint(String tableFrom, String tableTo){
+		public Constraint(String name, String tableFrom, String tableTo){
+			this.name = name;
 			this.tableFrom=tableFrom;
 			this.tableTo=tableTo;
 		}
@@ -91,7 +93,7 @@ public class OrderFinder {
 		}
 		
 		//Second get all the constraints
-		System.out.print("Constraint lookup");
+		System.out.print("Constraint lookup...");
 		Statement statm2 = connection.createStatement();
 		String filterTablesOnConstraintLookup = "";
 		if(tablesFilter!=null && !tablesFilter.isEmpty()){
@@ -109,8 +111,7 @@ public class OrderFinder {
 		List<Constraint> constraints = new ArrayList<Constraint>();
 		i =0;
 		while(res2.next()){
-			if((i++%10)==0)System.out.print(".");
-			constraints.add(new Constraint(res2.getString(1), res2.getString(2)));
+			constraints.add(new Constraint(res2.getString(1), res2.getString(2), res2.getString(3)));
 		}
 		res2.close();
 		statm2.close();
@@ -126,21 +127,20 @@ public class OrderFinder {
 		int maxSwap = 1000000;
 		int maxSwap10 = maxSwap*10;
 		Constraint constraint = null;
-		for (String table: orderedList){
-			swapMap.put(table, 0);
+		for (Constraint cc: constraints){
+			swapMap.put(cc.name, 0);
 		}
 		while(i<constraints.size()){
 			if((++c%maxSwap10)==0)System.out.print(".");
 			constraint = constraints.get(i);
 			if(orderedList.indexOf(constraint.tableFrom)<orderedList.indexOf(constraint.tableTo)){
-				swapTimes = swapMap.get(constraint.tableFrom);
+				swapTimes = swapMap.get(constraint.name);
 				if(swapTimes>=maxSwap){
 					i++;
 				}else{
 					orderedList.moveDown(constraint.tableFrom);
-					if(orderedList.indexOf(constraint.tableFrom)<orderedList.indexOf(constraint.tableTo))
-						orderedList.moveUp(constraint.tableTo);
-					swapMap.put(constraint.tableFrom, ++swapTimes);
+					orderedList.moveUp(constraint.tableTo);
+					swapMap.put(constraint.name, ++swapTimes);
 					i=0;
 				}
 			}else{
