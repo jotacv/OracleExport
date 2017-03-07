@@ -330,6 +330,7 @@ public class Export {
 			Export main = new Export();
 			main.ExportAll(argv[1],listaTablas,excludeFlag);
 			System.out.println("----------------- DONE! -----------------");
+			connection.close();
 		} else {
 			System.out.println("Failed to make connection!");
 		}

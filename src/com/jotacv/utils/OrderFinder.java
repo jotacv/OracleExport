@@ -176,6 +176,7 @@ public class OrderFinder {
 				for (String orderedTable : orderFinder.getOrderedList()){
 					System.out.println(orderedTable);
 				}
+				connection.close();
 			}
 		}else{
 			throw new IllegalArgumentException("Usage: java -jar this.jar url user password");
