@@ -24,8 +24,6 @@ public class Export {
 	
 	private enum DataType{LOB, DATE, NUMBER, OTH, NULL}
 	
-//	private int lobCount = 1;
-	
 	private String daPattern = "(\\d\\d\\d\\d)-(\\d\\d)-(\\d\\d)\\s(\\d\\d):(\\d\\d):(\\d\\d)(\\.?\\d*)";
 	
 	private int fileIdx= 0;
@@ -33,7 +31,8 @@ public class Export {
 	public boolean isLOB(String type){
 		if (type!=null && 
 				type.contains("CLOB") || 
-				type.contains("NCLOB") || 
+				type.contains("NCLOB") ||
+				type.contains("BLOB") || 
 				type.contains("BFILE")){
 			return true;
 			
@@ -96,46 +95,37 @@ public class Export {
 		@Override
 		public String toString(){
 			String ret = null;
-//			try{
-				switch (this.type){
-				case LOB:
-//					ret = "lob"+(lobCount++)+".txt";
-//					FileOutputStream fos = new FileOutputStream(ret);
-//					fos.write(this.val.getBytes());
-//					fos.close();
-//					ret="'["+ret+"]'";
-					ret = "q'{"+this.val+"}'";
-					break;
-				case DATE:
-					Matcher m = Pattern.compile(daPattern).matcher(this.val);
-					if(m.matches()){
-						ret= new StringBuilder()
-								.append("TO_DATE('")
-								.append(m.group(1)).append("-")
-								.append(m.group(2)).append("-")
-								.append(m.group(3)).append(" ")
-								.append(m.group(4)).append(":")
-								.append(m.group(5)).append(":")
-								.append(m.group(6)).append("', 'YYYY-MM-DD HH24:MI:SS')").toString();
-					}else{
-						//Default, it will blow up in the insert but no data is lost and u can manually fix it
-						ret = this.val;
-						System.out.println("WARN: DEFAULTED DATE: "+ret);
-					}
-					break;
-				case NULL:
-					ret = "null";
-					break;
-				case NUMBER:
+			switch (this.type){
+			case LOB:
+				ret = "q'{"+this.val+"}'";
+				break;
+			case DATE:
+				Matcher m = Pattern.compile(daPattern).matcher(this.val);
+				if(m.matches()){
+					ret= new StringBuilder()
+							.append("TO_DATE('")
+							.append(m.group(1)).append("-")
+							.append(m.group(2)).append("-")
+							.append(m.group(3)).append(" ")
+							.append(m.group(4)).append(":")
+							.append(m.group(5)).append(":")
+							.append(m.group(6)).append("', 'YYYY-MM-DD HH24:MI:SS')").toString();
+				}else{
+					//Default, it will blow up in the insert but no data is lost and u can manually fix it
 					ret = this.val;
-					break;
-				case OTH:
-					ret = "'"+this.val.replace("'", "''")+"'";
-					break;
+					System.out.println("WARN: DEFAULTED DATE: "+ret);
 				}
-//			}catch(FileNotFoundException e){} catch (IOException e) {
-//				System.out.println("Something happened with lob "+lobCount);
-//			}
+				break;
+			case NULL:
+				ret = "null";
+				break;
+			case NUMBER:
+				ret = this.val;
+				break;
+			case OTH:
+				ret = "'"+this.val.replace("'", "''")+"'";
+				break;
+			}
 			return ret;
 		}
 	}
