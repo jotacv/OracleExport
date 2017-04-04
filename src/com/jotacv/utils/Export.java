@@ -28,11 +28,20 @@ public class Export {
 	
 	private int fileIdx= 0;
 	
+	public static String byteToHex(byte[] bs) {
+		StringBuilder sb = new StringBuilder();
+		int i = 0;
+		for(int j = 0; i<bs.length; i++){
+			i = bs[j] & 0xFF;
+			sb.append(Integer.toHexString(i));
+		}
+		return sb.toString();
+	}
+	
 	public boolean isLOB(String type){
 		if (type!=null && 
 				type.contains("CLOB") || 
 				type.contains("NCLOB") ||
-				type.contains("BLOB") || 
 				type.contains("BFILE")){
 			return true;
 			
@@ -76,7 +85,7 @@ public class Export {
 				if (isDate(type)){
 					this.type=DataType.DATE;
 					this.val= val;
-				}else if(isLOB(type) || isBLOB(type)){
+				}else if(isLOB(type)){
 					this.type = DataType.LOB;
 					this.val=val;
 				}else if(isNumber(type)){
@@ -235,7 +244,7 @@ public class Export {
 								}
 							}else if(rmd!=null && isBLOB(columnType)){
 								Blob blob = res.getBlob(j);
-								columnContent = blob!=null?blob.toString():"";
+								columnContent = blob!=null?new String(blob.getBytes(1l,(int)blob.length())):"";
 								row.add(new Data(columnType,columnContent));
 							}else{
 								columnContent=res.getString(j);
