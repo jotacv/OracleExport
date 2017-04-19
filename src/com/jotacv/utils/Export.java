@@ -22,18 +22,16 @@ public class Export {
 	
 	private static Connection connection = null;
 	
-	private enum DataType{LOB, DATE, NUMBER, OTH, NULL}
+	private enum DataType{BLOB, LOB, DATE, NUMBER, OTH, NULL}
 	
 	private String daPattern = "(\\d\\d\\d\\d)-(\\d\\d)-(\\d\\d)\\s(\\d\\d):(\\d\\d):(\\d\\d)(\\.?\\d*)";
 	
 	private int fileIdx= 0;
 	
 	public static String byteToHex(byte[] bs) {
-		StringBuilder sb = new StringBuilder();
-		int i = 0;
-		for(int j = 0; i<bs.length; i++){
-			i = bs[j] & 0xFF;
-			sb.append(Integer.toHexString(i));
+		StringBuilder sb = new StringBuilder(bs.length);
+		for(byte b : bs){
+			sb.append(String.format("%02X", b));
 		}
 		return sb.toString();
 	}
@@ -87,6 +85,9 @@ public class Export {
 					this.val= val;
 				}else if(isLOB(type)){
 					this.type = DataType.LOB;
+					this.val=val;				
+				}else if(isBLOB(type)){
+					this.type = DataType.BLOB;
 					this.val=val;
 				}else if(isNumber(type)){
 					this.type = DataType.NUMBER;
@@ -107,6 +108,9 @@ public class Export {
 			switch (this.type){
 			case LOB:
 				ret = "q'{"+this.val+"}'";
+				break;
+			case BLOB:
+				ret = "hextoraw('"+this.val+"')";
 				break;
 			case DATE:
 				Matcher m = Pattern.compile(daPattern).matcher(this.val);
@@ -244,7 +248,7 @@ public class Export {
 								}
 							}else if(rmd!=null && isBLOB(columnType)){
 								Blob blob = res.getBlob(j);
-								columnContent = blob!=null?new String(blob.getBytes(1l,(int)blob.length())):"";
+								columnContent = blob!=null?byteToHex(blob.getBytes(1l,(int)blob.length())):"";
 								row.add(new Data(columnType,columnContent));
 							}else{
 								columnContent=res.getString(j);
@@ -271,6 +275,7 @@ public class Export {
 				statm.close();
 			}
 			fos.write("COMMIT;\n\n".getBytes());
+			
 			//When 10k insert lines are reached change file
 			if(lineOutputCount>=10000){
 				lineOutputCount=0;
