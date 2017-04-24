@@ -32,7 +32,7 @@ public class OrderFinder {
 	
 	private String constraintLookupQuery = "SELECT uc.constraint_name, ucc1.TABLE_NAME, ucc2.TABLE_NAME FROM user_constraints uc,"
 			+ "user_cons_columns ucc1,user_cons_columns ucc2,(SELECT c.constraint_name AS constraint_name FROM " 
-			+ "all_constraints c, all_tables t WHERE c.table_name = t.table_name AND t.owner = '%1s' %2s) ac "
+			+ "all_constraints c, all_tables t WHERE c.table_name = t.table_name AND t.owner = '%s' %s) ac "
 			+ "WHERE uc.constraint_name = ucc1.constraint_name AND uc.r_constraint_name "
 			+ "= ucc2.constraint_name AND ucc1.POSITION = ucc2.POSITION AND uc.constraint_type = 'R' "
 			+ "AND uc.constraint_name = ac.constraint_name";
@@ -124,7 +124,7 @@ public class OrderFinder {
 		i = 0;
 		int c = 0;
 		int swapTimes = 0;
-		int maxSwap = 1000000;
+		int maxSwap = tables.size()*1000;
 		int maxSwap10 = maxSwap*10;
 		Constraint constraint = null;
 		for (Constraint cc: constraints){

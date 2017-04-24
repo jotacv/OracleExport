@@ -26,7 +26,35 @@ public class Export {
 	
 	private String daPattern = "(\\d\\d\\d\\d)-(\\d\\d)-(\\d\\d)\\s(\\d\\d):(\\d\\d):(\\d\\d)(\\.?\\d*)";
 	
-	private int fileIdx= 0;
+	private class RollingFileOutputStream {
+		
+		private int fileIdx = 1;		
+		private int cc = 0;		
+		private FileOutputStream file = null;
+		private int rollCount = 50000;
+
+		public RollingFileOutputStream(int rollCount) throws FileNotFoundException {
+			this.rollCount = rollCount;
+			this.file = new FileOutputStream("output0.sql");
+		}
+		
+		private void rollFile() throws IOException{
+			this.file.close();
+			this.file= new FileOutputStream("output"+fileIdx+++".sql");
+			this.cc = 0;	
+		}
+		
+		public void write(byte[] b) throws IOException{
+			if(cc++>rollCount)
+				this.rollFile();
+			this.file.write(b);
+		}
+		
+		public void close() throws IOException{
+			this.file.close();
+		}
+		
+	}
 	
 	public static String byteToHex(byte[] bs) {
 		StringBuilder sb = new StringBuilder(bs.length);
@@ -168,10 +196,7 @@ public class Export {
 		}
 		return ret.toString();
 	}
-	
-	private FileOutputStream getFile() throws FileNotFoundException{
-		return new FileOutputStream("output"+fileIdx+++".sql");
-	}
+
 
 	
 	private void ExportAll(String owner, List<String> tablesFilter, boolean excludeFlag) throws SQLException, IOException{
@@ -211,13 +236,10 @@ public class Export {
 		//Retrieving data & export
 		String columnType = "";
 		String columnContent = "";
-		FileOutputStream fos = getFile();
+		RollingFileOutputStream rfos = new RollingFileOutputStream(50000);
 		int tableidx=0;
-		int lineOutputCount = 0;
 		for(String tableName: tables){
 			tableidx++;
-			fos.write(("\nREM INSERTING into "+tableName+"\n").getBytes());
-			fos.write("SET DEFINE OFF;\n".getBytes());
 			try{
 				List<String> columnsHeaders = new ArrayList<String>();
 				System.out.println("Fetching table "+tableName);
@@ -262,8 +284,7 @@ public class Export {
 						}
 					}
 					String insert_part2 = createSqlPart2(row);
-					fos.write((insert_part1+insert_part2).getBytes());
-					lineOutputCount++;
+					rfos.write((insert_part1+insert_part2).getBytes());
 				}
 			}catch(Exception e){
 				System.out.print("- ERROR IN TABLE "+tableName+": ");
@@ -274,16 +295,9 @@ public class Export {
 				res.close();
 				statm.close();
 			}
-			fos.write("COMMIT;\n\n".getBytes());
-			
-			//When 10k insert lines are reached change file
-			if(lineOutputCount>=10000){
-				lineOutputCount=0;
-				fos.close();
-				fos = getFile();
-			}
+			rfos.write("COMMIT;\n\n".getBytes());
 		}
-		fos.close();
+		rfos.close();
 	}
 
 	public static void main(String[] argv) throws Exception {
