@@ -82,7 +82,7 @@ public class OrderFinder {
 		statm.close();
 		System.out.println(" Got "+tables.size()+" tables.");
 		if(tablesFilter!=null && !tablesFilter.isEmpty()){
-			List<String> tablesFiltered = new ArrayList<>();
+			List<String> tablesFiltered = new ArrayList<String>();
 			for (String table : tables){
 				if (tablesFilter.contains(table)^excludeFlag)
 					tablesFiltered.add(table);
@@ -118,7 +118,7 @@ public class OrderFinder {
 		System.out.println(" Got "+constraints.size()+" constraints.");		
 		
 		//Then do the magic
-		System.out.print("Ordering");
+		System.out.print("Ordering...");
 		this.orderedList = new SwappingList();
 		this.orderedList.addAll(tables);
 		i = 0;
@@ -148,7 +148,7 @@ public class OrderFinder {
 				i++;
 			}
 		}
-		System.out.println(" Done");
+		System.out.println(". Done");
 		i=0;
 		for (Constraint constr : constraints){
 			if(orderedList.indexOf(constr.tableFrom)<orderedList.indexOf(constr.tableTo)){

@@ -20,7 +20,7 @@ import java.util.regex.Pattern;
 
 public class Export {
 	
-	private static Connection connection = null;
+	private static Connection connection = null; 
 	
 	private enum DataType{BLOB, LOB, DATE, NUMBER, OTH, NULL}
 	
@@ -219,7 +219,7 @@ public class Export {
 			System.out.println("\nGot "+tables.size()+" tables.");
 			//Filter tables
 			if(tablesFilter!=null && !tablesFilter.isEmpty()){
-				List<String> tablesFiltered = new ArrayList<>();
+				List<String> tablesFiltered = new ArrayList<String>();
 				for (String table : tables){
 					if (tablesFilter.contains(table)^excludeFlag)
 						tablesFiltered.add(table);
@@ -310,7 +310,7 @@ public class Export {
 			return;
 		}
 
-		System.out.println("Oracle JDBC Driver Connected!");
+		
 
 		List<String> listaTablas = null;
 		boolean excludeFlag = false;
@@ -344,6 +344,7 @@ public class Export {
 		}
 
 		if (connection != null) {
+			System.out.println("Oracle JDBC Driver Connected!");
 			Locale.setDefault(Locale.US);
 			Export main = new Export();
 			main.ExportAll(argv[1],listaTablas,excludeFlag);
