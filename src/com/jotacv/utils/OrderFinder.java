@@ -140,7 +140,6 @@ public class OrderFinder {
 				}else{
 					orderedList.moveUp(constraint.tableTo);
 					orderedList.moveDown(constraint.tableFrom);
-					//orderedList.moveUp(constraint.tableTo);
 					swapMap.put(constraint.name, ++swapTimes);
 					i=0;
 				}

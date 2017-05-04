@@ -197,41 +197,52 @@ public class Export {
 		return ret.toString();
 	}
 
+	private List<String> findTablesByFilter(String owner, List<String> tablesFilter, boolean excludeFlag) throws SQLException{
+		Statement statm=null;
+		ResultSet res=null;
+		List<String> tables=null;
+		
+		statm = connection.createStatement();
+		res = statm.executeQuery("SELECT table_name FROM all_tables WHERE owner = '"+owner+"'");
+		tables = new ArrayList<String>();
+		while(res.next()){
+			tables.add(res.getString(1));
+		}
+		res.close(); statm.close();
+		System.out.println("\nGot "+tables.size()+" tables.");
+		//Filter tables
+		if(tablesFilter!=null && !tablesFilter.isEmpty()){
+			List<String> tablesFiltered = new ArrayList<String>();
+			for (String tableFilter : tablesFilter){
+				if (tables.contains(tableFilter)^excludeFlag)
+					tablesFiltered.add(tableFilter);
+			}
+			if(!tablesFiltered.isEmpty())
+				tables = tablesFiltered;
+			System.out.println("Narrowed down to "+tables.size());
+		}
+		return tables;
+	}
 
 	
-	private void ExportAll(String owner, List<String> tablesFilter, boolean excludeFlag) throws SQLException, IOException{
+	private void ExportAll(String owner, List<String> tablesFilter, boolean excludeFlag, boolean orderFlag) throws SQLException, IOException{
+		
 		//Tables list & order
 		Statement statm=null;
 		ResultSet res=null;
 		List<String> tables=null;
 		try{
-			OrderFinder orderFinder = new OrderFinder(connection, owner, tablesFilter, excludeFlag);
-			tables = orderFinder.getOrderedList();
+			if(orderFlag){
+				OrderFinder orderFinder = new OrderFinder(connection, owner, tablesFilter, excludeFlag);
+				tables = orderFinder.getOrderedList();
+			}else{
+				System.out.print("  Using input order.");
+				tables = findTablesByFilter(owner, tables, orderFlag);
+			}
 		}catch(Exception e){
 			System.out.println(" ERROR: Cannot get tables order");
-			statm = connection.createStatement();
-			res = statm.executeQuery("SELECT table_name FROM all_tables WHERE owner = '"+owner+"'");
-			tables = new ArrayList<String>();
-			while(res.next()){
-				tables.add(res.getString(1));
-			}
-			res.close(); statm.close();
-			System.out.println("\nGot "+tables.size()+" tables.");
-			//Filter tables
-			if(tablesFilter!=null && !tablesFilter.isEmpty()){
-				List<String> tablesFiltered = new ArrayList<String>();
-				for (String table : tables){
-					if (tablesFilter.contains(table)^excludeFlag)
-						tablesFiltered.add(table);
-				}
-				if(!tablesFiltered.isEmpty())
-					tables = tablesFiltered;
-				System.out.println("Narrowed down to "+tables.size());
-			}
-			System.out.println("\n");
+			tables = findTablesByFilter(owner, tables, orderFlag);
 		}
-		
-
 		
 		//Retrieving data & export
 		String columnType = "";
@@ -314,20 +325,28 @@ public class Export {
 
 		List<String> listaTablas = null;
 		boolean excludeFlag = false;
+		boolean orderFlag = true;
 		try {
-			if (argv.length==3 || argv.length==4 || argv.length==5){
+			if (argv.length==3 || argv.length==4 || argv.length==5 ){
 				connection = DriverManager.getConnection(argv[0],argv[1],argv[2]);
 				if(argv.length>=4){
 					String list = null;
 					
+					
 					if(argv.length==4){
 						list = argv[3];
 					}else{
-						excludeFlag = argv[3].equals("-e");
-						if(!excludeFlag)
-							throw new IllegalArgumentException();
 						list = argv[4];
+						if(argv[3].equals("-e")){
+							excludeFlag = true;
+						}else if(argv[3].equals("-o")){
+							orderFlag=false;
+						}else{
+							throw new IllegalArgumentException();
+						}
+						
 					}
+					
 					try{
 						listaTablas = Arrays.asList(list.replace(" ", "").split(","));
 					}catch(Exception e){
@@ -335,7 +354,7 @@ public class Export {
 					}
 				}
 			}else{
-				throw new IllegalArgumentException("Usage: java -jar this.jar url user password [-e] [tableList]");
+				throw new IllegalArgumentException("Usage: java -jar this.jar url user password [-e/-o] [tableList]");
 			}
 		} catch (SQLException e) {
 			System.out.println("Connection Failed! Check output console");
@@ -347,7 +366,7 @@ public class Export {
 			System.out.println("Oracle JDBC Driver Connected!");
 			Locale.setDefault(Locale.US);
 			Export main = new Export();
-			main.ExportAll(argv[1],listaTablas,excludeFlag);
+			main.ExportAll(argv[1],listaTablas,excludeFlag, orderFlag);
 			System.out.println("----------------- DONE! -----------------");
 			connection.close();
 		} else {
